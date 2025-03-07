@@ -1,7 +1,7 @@
 import os
 import time
 import sqlite3
-from flask import Flask, request, jsonify, send_from_directory, session
+from flask import Flask, request, jsonify, send_from_directory
 import openai
 from flask_cors import CORS
 
@@ -10,10 +10,8 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)  # Enable CORS for frontend requests
 app.secret_key = "your-secret-key"  # Required for session storage
 
-# OpenAI API Key
-openai.api_key = import os
+# OpenAI API Key (Stored securely as an environment variable)
 openai.api_key = os.getenv("OPENAI_API_KEY")
-ASSISTANT_ID = "asst_BVHJcqvmsENpjqhBlHI07sre"
 
 # Database file path
 DB_FILE = "chat_history.db"
@@ -53,42 +51,13 @@ def ask_hope_ai():
         if not user_query:
             return jsonify({"error": "Question is required"}), 400
 
-        print("Creating thread...")
-        thread = openai.beta.threads.create()
-        print(f"Thread created: {thread.id}")
-
-        print("Sending message to Assistant...")
-        message = openai.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=user_query
+        print("Sending message to OpenAI API...")
+        response = openai.ChatCompletion.create(
+            model="gpt-4-turbo",
+            messages=[{"role": "user", "content": user_query}]
         )
-        print(f"Message sent: {message.id}")
 
-        print("Running Assistant...")
-        run = openai.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=ASSISTANT_ID
-        )
-        print(f"Run created: {run.id}, Status: {run.status}")
-
-        # Wait for completion
-        while run.status not in ["completed", "failed"]:
-            time.sleep(2)
-            run = openai.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-            print(f"Checking Run Status: {run.status}")
-
-        if run.status == "failed":
-            print("Assistant failed to generate a response.")
-            return jsonify({"error": "Assistant failed to generate a response."})
-
-        messages = openai.beta.threads.messages.list(thread_id=thread.id)
-        print("Messages Retrieved:", messages.data)
-
-        if not messages.data:
-            return jsonify({"error": "No response from Assistant"}), 500
-
-        answer = messages.data[0].content[0].text.value
+        answer = response["choices"][0]["message"]["content"]
 
         # Save to SQLite database
         with sqlite3.connect(DB_FILE) as conn:
@@ -107,7 +76,7 @@ def ask_hope_ai():
 def get_chat_history():
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        # Ensure SQLite correctly orders by timestamp (most recent first)
+        # Retrieve messages sorted by timestamp in descending order (most recent first)
         cursor.execute("SELECT question, answer, timestamp FROM chat ORDER BY datetime(timestamp) DESC")
         history = [{"question": row[0], "answer": row[1], "timestamp": row[2]} for row in cursor.fetchall()]
     return jsonify({"history": history})
