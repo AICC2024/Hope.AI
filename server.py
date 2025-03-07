@@ -13,6 +13,9 @@ app.secret_key = "your-secret-key"  # Required for session storage
 # OpenAI API Key (Stored securely as an environment variable)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# OpenAI Assistant ID (Replace with the correct one)
+ASSISTANT_ID = "asst_BVHJcqvmsENpjqhBlHI07sre"
+
 # Database file path
 DB_FILE = "chat_history.db"
 
@@ -51,17 +54,40 @@ def ask_hope_ai():
         if not user_query:
             return jsonify({"error": "Question is required"}), 400
 
-        print("Sending message to OpenAI API...")
+        print("Creating thread for conversation tracking...")
 
-        response = openai.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions about HOPE regulations."},
-                {"role": "user", "content": user_query}
-            ]
+        # Create a new thread for each conversation
+        thread = openai.beta.threads.create()
+
+        # Send the user's question to the Assistant
+        message = openai.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=user_query
         )
 
-        answer = response.choices[0].message.content  # Corrected way to extract response
+        print("Starting assistant run...")
+
+        # Start an assistant run
+        run = openai.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=ASSISTANT_ID
+        )
+
+        # Wait for completion
+        while run.status not in ["completed", "failed"]:
+            time.sleep(2)  # Wait 2 seconds before checking again
+            run = openai.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+        if run.status == "failed":
+            print("Assistant failed to generate a response.")
+            return jsonify({"error": "Assistant failed to generate a response."})
+
+        print("Retrieving assistant's response...")
+
+        # Retrieve the assistant's response
+        messages = openai.beta.threads.messages.list(thread_id=thread.id)
+        answer = messages.data[0].content[0].text.value  # Extract the response
 
         # Save to SQLite database
         with sqlite3.connect(DB_FILE) as conn:
