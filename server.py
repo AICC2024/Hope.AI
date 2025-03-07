@@ -53,7 +53,7 @@ def ask_hope_ai():
 
         print("Sending message to OpenAI API...")
 
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that answers questions about HOPE regulations."},
