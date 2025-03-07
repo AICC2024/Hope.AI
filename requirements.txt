@@ -2,4 +2,4 @@ flask
 gunicorn
 openai
 flask-cors
-sqlite3
+
