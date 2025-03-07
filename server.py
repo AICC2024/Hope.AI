@@ -52,10 +52,13 @@ def ask_hope_ai():
             return jsonify({"error": "Question is required"}), 400
 
         print("Sending message to OpenAI API...")
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
-            messages=[{"role": "user", "content": user_query}]
-        )
+           response = openai.ChatCompletion.create(
+       model="gpt-4o-mini",
+       messages=[
+           {"role": "system", "content": "You are a helpful assistant that answers questions about HOPE regulations."},
+           {"role": "user", "content": user_query}
+       ]
+   )
 
         answer = response["choices"][0]["message"]["content"]
 
