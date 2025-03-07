@@ -53,15 +53,15 @@ def ask_hope_ai():
 
         print("Sending message to OpenAI API...")
 
-        response = openai.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions about HOPE regulations."},
-                {"role": "user", "content": user_query}
-            ]
-        )
+       response = openai.chat.completions.create(
+       model="gpt-4o",
+       messages=[
+           {"role": "system", "content": "You are a helpful assistant that answers questions about HOPE regulations."},
+           {"role": "user", "content": user_query}
+       ]
+   )
 
-        answer = response["choices"][0]["message"]["content"]
+   answer = response.choices[0].message.content  # Corrected way to extract response
 
         # Save to SQLite database
         with sqlite3.connect(DB_FILE) as conn:
